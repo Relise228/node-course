@@ -1,14 +1,14 @@
-const express = require("express")
-const { check, body } = require("express-validator")
+const express = require("express");
+const { check, body } = require("express-validator");
 
-const authController = require("../controllers/auth")
-const User = require("../models/user")
+const authController = require("../controllers/auth");
+const User = require("../models/user");
 
-const router = express.Router()
+const router = express.Router();
 
-router.get("/login", authController.getLogin)
+router.get("/login", authController.getLogin);
 
-router.get("/signup", authController.getSignup)
+router.get("/signup", authController.getSignup);
 
 router.post(
   "/login",
@@ -17,13 +17,10 @@ router.post(
       .isEmail()
       .withMessage("Please enter a valid email address.")
       .normalizeEmail(),
-    body("passowd", "Password has to be valid.")
-      .isLength({ min: 5 })
-      .isAlphanumeric()
-      .trim(),
+    body("password", "Password has to be valid.").isLength({ min: 5 }).trim(),
   ],
   authController.postLogin
-)
+);
 
 router.post(
   "/signup",
@@ -32,15 +29,11 @@ router.post(
       .isEmail()
       .withMessage("Please enter a valid email.")
       .custom((value, { req }) => {
-        // if (value === "test@gmail.com") {
-        //   throw new Error("This email address is forbidden.")
-        // }
-        // return true
         return User.findOne({ email: value }).then((userDoc) => {
           if (userDoc) {
-            return Promise.reject("Email exists already.")
+            return Promise.reject("Email exists already.");
           }
-        })
+        });
       })
       .normalizeEmail(),
     body(
@@ -53,23 +46,23 @@ router.post(
     body("confirmPassword")
       .custom((value, { req }) => {
         if (value !== req.body.password) {
-          throw new Error("Passwords have to match!")
+          throw new Error("Passwords have to match!");
         }
-        return true
+        return true;
       })
       .trim(),
   ],
   authController.postSignup
-)
+);
 
-router.post("/logout", authController.postLogout)
+router.post("/logout", authController.postLogout);
 
-router.get("/reset", authController.getReset)
+router.get("/reset", authController.getReset);
 
-router.post("/reset", authController.postReset)
+router.post("/reset", authController.postReset);
 
-router.get("/new-password/:token", authController.getNewPassword)
+router.get("/new-password/:token", authController.getNewPassword);
 
-router.post("/new-password", authController.postNewPassword)
+router.post("/new-password", authController.postNewPassword);
 
-module.exports = router
+module.exports = router;
