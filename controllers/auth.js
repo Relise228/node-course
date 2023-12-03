@@ -5,15 +5,18 @@ const mg = require("nodemailer-mailgun-transport")
 const { validationResult } = require("express-validator")
 
 const User = require("../models/user")
+let transporter
 
-const transporter = nodemailer.createTransport(
-  mg({
-    auth: {
-      api_key: "5c6a872af1198635e84c8718e4f61a24-c30053db-11a1bbbf",
-      domain: "sandbox54bd06cf77d8485083a5c6f98ff85a02.mailgun.org",
-    },
-  })
-)
+try {
+  transporter = nodemailer.createTransport(
+    mg({
+      auth: {
+        api_key: "5c6a872af1198635e84c8718e4f61a24-c30053db-11a1bbbf",
+        domain: "sandbox54bd06cf77d8485083a5c6f98ff85a02.mailgun.org",
+      },
+    })
+  )
+} catch {}
 
 exports.getLogin = (req, res, next) => {
   let message = req.flash("error")
@@ -91,7 +94,6 @@ exports.postLogin = (req, res, next) => {
           req.session.isLoggedIn = true
           req.session.user = user
           return req.session.save((err) => {
-            console.log(err)
             return res.redirect("/")
           })
         }
@@ -107,7 +109,9 @@ exports.postLogin = (req, res, next) => {
         })
       })
       .catch((err) => {
-        res.redirect("/login")
+        const error = new Error(err)
+        error.httpStatusCode = 500
+        return next(error)
       })
   })
 }
@@ -137,15 +141,21 @@ exports.postSignup = (req, res, next) => {
       return user.save()
     })
     .then((result) => {
-      transporter.sendMail({
-        to: email,
-        from: "shop@node.com",
-        subject: "Signup succeeded!",
-        html: "<h1>You seccessfully signed up!</h1>",
-      })
+      if (transporter) {
+        transporter.sendMail({
+          to: email,
+          from: "shop@node.com",
+          subject: "Signup succeeded!",
+          html: "<h1>You seccessfully signed up!</h1>",
+        })
+      }
       res.redirect("/login")
     })
-    .catch((err) => console.log(err))
+    .catch((err) => {
+      const error = new Error(err)
+      error.httpStatusCode = 500
+      return next(error)
+    })
 }
 
 exports.postLogout = (req, res, next) => {
@@ -188,18 +198,22 @@ exports.postReset = (req, res, next) => {
       })
       .then((result) => {
         res.redirect("/")
-        transporter.sendMail({
-          to: req.body.email,
-          from: "shop@node.com",
-          subject: "Password reset",
-          html: `
-        <p>You requested password reset</p>
-        <p>Click this <a href="http://localhost:4000/new-password/${token}">link</a> to set a nwe password</p>
-        `,
-        })
+        if (transporter) {
+          transporter.sendMail({
+            to: req.body.email,
+            from: "shop@node.com",
+            subject: "Password reset",
+            html: `
+          <p>You requested password reset</p>
+          <p>Click this <a href="http://localhost:4000/new-password/${token}">link</a> to set a nwe password</p>
+          `,
+          })
+        }
       })
       .catch((err) => {
-        console.log(err)
+        const error = new Error(err)
+        error.httpStatusCode = 500
+        return next(error)
       })
   })
 }
@@ -227,7 +241,11 @@ exports.getNewPassword = (req, res, next) => {
         resetToken: token,
       })
     })
-    .catch((err) => console.log(err))
+    .catch((err) => {
+      const error = new Error(err)
+      error.httpStatusCode = 500
+      return next(error)
+    })
 }
 
 exports.postNewPassword = (req, res, next) => {
@@ -258,5 +276,9 @@ exports.postNewPassword = (req, res, next) => {
         })
       })
     })
-    .catch((err) => console.log(err))
+    .catch((err) => {
+      const error = new Error(err)
+      error.httpStatusCode = 500
+      return next(error)
+    })
 }
