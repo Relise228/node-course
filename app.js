@@ -8,18 +8,28 @@ const session = require("express-session")
 const MongoDBStore = require("connect-mongodb-session")(session)
 const csrf = require("csurf")
 const flash = require("connect-flash")
+const helmet = require("helmet")
+const compression = require("compression")
+const morgan = require("morgan")
+const fs = require("fs")
+const https = require("https")
 
-const PORT = process.env.SERVER_PORT || 4000
+const PORT = process.env.PORT || 4000
 
 const errorController = require("./controllers/error")
 const User = require("./models/user")
 
+const MONGODB_URI = `mongodb+srv://${process.env.MONGO_USER}:${process.env.MONGO_PASSWORD}@nodecluster.ysnninw.mongodb.net/${process.env.MONGO_DEFAULT_DATABASE}?retryWrites=true&w=majority`
+
 const app = express()
 const store = new MongoDBStore({
-  uri: "mongodb+srv://relise:MtfRbULbc6zLrUmN@nodecluster.ysnninw.mongodb.net/node-course?retryWrites=true&w=majority",
+  uri: MONGODB_URI,
   collection: "sessions",
 })
 const csrfProtection = csrf()
+
+const privateKey = fs.readFileSync("server.key")
+const certificate = fs.readFileSync("server.cert")
 
 const fileStorage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -49,6 +59,17 @@ app.set("views", "views")
 const adminRoutes = require("./routes/admin")
 const shopRoutes = require("./routes/shop")
 const authRoutes = require("./routes/auth")
+
+const accessLogStream = fs.createWriteStream(
+  path.join(__dirname, "access.log"),
+  {
+    flags: "a",
+  }
+)
+
+app.use(helmet())
+app.use(compression())
+app.use(morgan("combined", { stream: accessLogStream }))
 
 app.use(bodyParser.urlencoded({ extended: false }))
 app.use(multer({ storage: fileStorage, fileFilter }).single("image"))
@@ -104,14 +125,22 @@ app.use((error, req, res, next) => {
 })
 
 mongoose
-  .connect(
-    "mongodb+srv://relise:MtfRbULbc6zLrUmN@nodecluster.ysnninw.mongodb.net/?retryWrites=true&w=majority",
-    {
-      dbName: "node-course",
-    }
-  )
+  .connect(MONGODB_URI, {
+    dbName: "node-course",
+  })
   .then((result) => {
     console.log("Connected")
+    // https
+    //   .createServer(
+    //     {
+    //       key: privateKey,
+    //       cert: certificate,
+    //     },
+    //     app
+    //   )
+    //   .listen(PORT, () => {
+    //     console.log(`SERVER STARTED ON PORT - ${PORT}`)
+    //   })
     app.listen(PORT, () => {
       console.log(`SERVER STARTED ON PORT - ${PORT}`)
     })

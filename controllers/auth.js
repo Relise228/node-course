@@ -11,8 +11,8 @@ try {
   transporter = nodemailer.createTransport(
     mg({
       auth: {
-        api_key: "5c6a872af1198635e84c8718e4f61a24-c30053db-11a1bbbf",
-        domain: "sandbox54bd06cf77d8485083a5c6f98ff85a02.mailgun.org",
+        api_key: process.env.MAILGUN_API_KEY,
+        domain: process.env.MAILGUN_DOMAIN,
       },
     })
   )
